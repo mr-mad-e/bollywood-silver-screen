@@ -111,6 +111,34 @@
               </v-card>
             </v-dialog>
 
+            <v-dialog v-model="dialog.collection" fullscreen>
+              <v-card>
+                <v-toolbar color="primary" class="mb-4">
+                  <v-icon color="white" @click="dialog.collection=false">mdi-arrow-left</v-icon>
+                  <v-spacer></v-spacer>
+                  <v-toolbar-title class="white--text text-subtitle-1">
+                    {{collection.name}}</v-toolbar-title
+                  >
+                  <v-spacer></v-spacer>
+                  <v-icon color="white" @click="openSearch()">mdi-magnify</v-icon>
+                </v-toolbar>
+
+                <v-card-text>
+                  <v-row>
+                    <template v-for="(item, index) in collection.parts">
+                      <v-col cols="4" md="2" :key="index">
+                        <v-card :disabled="!hasComment(item)" @click="onClick(item, genre)">
+                          <v-img
+                            :src="`https://image.tmdb.org/t/p/w500${item.poster_path}`"
+                          ></v-img>
+                        </v-card>
+                      </v-col>
+                    </template>
+                  </v-row>
+                </v-card-text>
+              </v-card>
+            </v-dialog>
+
             <v-dialog v-model="dialog.genre" fullscreen>
               <v-card>
                 <v-toolbar color="primary" class="mb-4">
@@ -126,7 +154,7 @@
                 <v-card-text>
                   <v-row>
                     <template v-for="(item, index) in genre.movies">
-                      <v-col cols="4" md="3" :key="index">
+                      <v-col cols="4" md="2" :key="index">
                         <v-card @click="onClick(item, genre)">
                           <v-img
                             :src="`https://image.tmdb.org/t/p/w500${item.poster_path}`"
@@ -186,8 +214,9 @@
                 </v-card-actions> -->
 
                 <template v-if="collection.name">
-                  <v-card-subtitle class="font-weight-bold">
+                  <v-card-subtitle class="cursor-pointer font-weight-bold"  @click="dialog.collection = true">
                     More from {{collection.name}}
+                    <v-icon class="float-right">mdi-chevron-right</v-icon>
                   </v-card-subtitle>
                   <v-card-text>
                     <v-slide-group>
@@ -205,7 +234,10 @@
                   </v-card-text>
                 </template>
 
-                <v-card-subtitle class="font-weight-bold" @click="openGenre(genre)"> More Like This </v-card-subtitle>
+                <v-card-subtitle class="cursor-pointer font-weight-bold" @click="openGenre(genre)">
+                  More Like This
+                  <v-icon class="float-right">mdi-chevron-right</v-icon>
+                </v-card-subtitle>
                 <v-card-text>
                   <v-slide-group>
                     <template v-for="(item, index) in getGenreMovies()">
@@ -247,6 +279,7 @@
               view: false,
               search: false,
               genre: false,
+              collection: false,
             },
             search: '',
             movie: {},
@@ -274,11 +307,15 @@
           openSearch() {
             this.dialog.genre = false;
             this.dialog.view = false;
+            this.dialog.collection = false;
             this.dialog.search = true;
           },
           openGenre(genre) {
             this.genre = genre;
             this.dialog.genre = true;
+            this.dialog.view = false;
+            this.dialog.collection = false;
+            this.dialog.search = false;
           },
           getFilteredMovies() {
             if (this.search) {
@@ -307,6 +344,7 @@
           onClick(movie, genre) {
             this.dialog.genre = false;
             this.dialog.search = false;
+            this.dialog.collection = false;
 
             this.movie = movie;
             if (genre) {
@@ -344,8 +382,6 @@
               genre.movies = [];
               this.genres[genre.id] = genre;
             });
-
-            console.log(this.genres);
           },
           async getMovies() {
             this.list = await fetch(
@@ -373,6 +409,13 @@
                   this.genres[genre].movies.push(movie);
                 });
               });
+            }
+
+            for (const key in this.genres) {
+              if (Object.hasOwnProperty.call(this.genres, key)) {
+                const genre = this.genres[key];
+                genre.movies = (genre.movies || []).sort((a, b) => b.popularity - a.popularity);
+              }
             }
 
             this.popularMovies = this.movies
